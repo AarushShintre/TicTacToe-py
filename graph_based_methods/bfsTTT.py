@@ -151,37 +151,37 @@ class TicTacToe:
         return results
 
     def map_game(self, board, player):
-        visited, computer_visited = self.get_visited(player)
         temp_board = board
-        queue = computer_visited  # all spots where the computer has made a mark
-        temp_visited = visited  # all spots that can't be moved to
+        queue = self.get_visited(player)[0] 
+        temp_visited = self.get_visited(player)[0]   
         win_dict = {}
-        # check first move to be made, must be BFS too, try implementing winning_state for this too
-        # use map_game to get winning estimates for each spot
-        if len(computer_visited) == 0:
+        if len(self.get_visited(player)[1]) == 0:
             for key in list(TTT_graph.keys()):
-                if key not in visited:
+                if key not in temp_visited:
                     win_dict[key] = self.get_states(temp_board, [key], player)
             return win_dict
+        traversal_list=[]  
         while queue:
-            first_node = queue[0]
             current_node = queue.pop(0)
             for neighbor in TTT_graph[current_node]:
+                traversal=[]
+                traversal.append(current_node)
                 if neighbor not in temp_visited:
                     win_dict[neighbor] = [0, 0, 0]
-                    # check all the parent nodes if a second layer, see if playing one of those plus this is a win
+                    traversal.append(neighbor)
                     queue.append(neighbor)
                     temp_visited.append(neighbor)
-                    if current_node != first_node:
-                        states = self.get_states(
-                            board, [current_node, neighbor], player)
-                        for i in range(2):
-                            win_dict[neighbor][i] += states[i]
-                            win_dict[current_node][i] += states[i]
-                    else:
-                        win_dict[neighbor] = self.get_states(
-                            board, [neighbor], player)
+                    traversal_list.append(traversal)
 
+        visited, computer_visited = self.get_visited(player)
+        for traversal in traversal_list:
+            states = self.get_states(
+                            board, [spot for spot in traversal], player)
+            for key in traversal:
+                if key not in visited:
+                    for j in range(3):
+                        win_dict[key][j]+=states[j]
+                    
         return win_dict
 
     def bfs_player(self, board, player):
@@ -204,7 +204,6 @@ class TicTacToe:
                 if value[2] < lowest_loses:
                     lowest_loses = value[2]
                     spot = key
-
         self.fix_position(spot, player)
         return True
 
@@ -311,7 +310,7 @@ def test():
           * 100, '%', 'of times on average')
 
 # runs 5 different samples each of 1000 games, and returns average win rates of the computer against a random
-test()
+# test()
 
 # use below code if you want to play against computer
 game = TicTacToe()
