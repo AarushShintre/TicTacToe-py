@@ -111,30 +111,39 @@ class TicTacToe:
 
     def heuristic(self, board, player):
         score = 0
+        opponent = 'X' if player == 'O' else 'O'
 
         # Check rows
         for row in board:
-            if row.count(player) == 2 and row.count('-') == 1:
+            if row.count(opponent) == 2 and row.count('-') == 1:
+                score -= 1
+            elif row.count(player) == 2 and row.count('-') == 1:
                 score += 1
 
         # Check columns
         for col in range(3):
             column = [board[row][col] for row in range(3)]
-            if column.count(player) == 2 and column.count('-') == 1:
-                score += 1
+            if column.count(opponent) == 2 and column.count('-') == 1:
+                score -= 10
+            elif column.count(player) == 2 and column.count('-') == 1:
+                score += 20
 
         # Check diagonals
         diagonal1 = [board[i][i] for i in range(3)]
         diagonal2 = [board[i][2-i] for i in range(3)]
-        if diagonal1.count(player) == 2 and diagonal1.count('-') == 1:
-            score += 1
-        if diagonal2.count(player) == 2 and diagonal2.count('-') == 1:
-            score += 1
+        if diagonal1.count(opponent) == 2 and diagonal1.count('-') == 1:
+            score -= 10
+        elif diagonal1.count(player) == 2 and diagonal1.count('-') == 1:
+            score += 20
 
-        # If a win is not possible, prioritize moves that lead to a draw
+        if diagonal2.count(opponent) == 2 and diagonal2.count('-') == 1:
+            score -= 10
+        elif diagonal2.count(player) == 2 and diagonal2.count('-') == 1:
+            score += 20
+
+        # Additional condition for making a draw
         if score == 0:
-            if self.is_board_filled(board):
-                score += 0.5
+            score += 10
 
         return score
 
@@ -188,15 +197,20 @@ class TicTacToe:
             if player == 'X':
                 self.random_player(self.board, player)
             else:
-                self.a_star_search(self.board, player)
+                try:
+                    move=self.a_star_search(self.board, player)
+                    self.fix_position(move, player)
+                except:
+                    self.random_player(self.board, player)
 
             if self.is_player_win(self.board, player):
                 if player == 'X':
-                    return 1
-                else:
                     return -1
+                else:
+                    return 1
 
             if self.is_board_filled(self.board):
+                print('draw')
                 return 0
 
             player = 'O' if player == 'X' else 'X'
@@ -255,12 +269,12 @@ def test():
         for _ in range(game_plays):
             game = TicTacToe()
             result = game.start_against_random()
-            if result == 1:
+            if result == 1 or result==0:
                 score += 1
         summation_score_per_gameplay += score/game_plays
         print(score/game_plays)
 
-    print('The A* agent won ', (summation_score_per_gameplay/samples)
+    print('The A* agent won or atleast had a draw', (summation_score_per_gameplay/samples)
           * 100, '%', 'of times on average')
 
 # runs 5 different samples each of 1000 games, and returns average win rates of the computer against a random
