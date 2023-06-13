@@ -139,7 +139,7 @@ class TicTacToe:
             for key in traversal:
                 if key not in visited:
                     for j in range(3):
-                        win_dict[key][j] += states[j]
+                        win_dict[key][j] += states[j] ** 2
 
         return win_dict
 
