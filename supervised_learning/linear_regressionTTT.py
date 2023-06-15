@@ -1,4 +1,3 @@
-# linear regression with TTT
 import random
 import copy
 
@@ -38,239 +37,166 @@ class TicTacToe:
             weights[i] = weights[i] + learningConstant * \
                 (train_val - approx) * features[i]
 
-    
     def get_board_features(self, board, player):
-        x0 = 1  # Constant
-        x1 = 0  # Number of rows/columns/diagonals with two of our own pieces and one emtpy field
-        x2 = 0  # Number of rows/columns/diagonals with two of opponent's pieces and one empty field
-        x3 = 0  # Is our own piece on the center field
-        x4 = 0  # Number of own pieces in corners
-        x5 = 0  # Number of rows/columns/diagonals with one own piece and two empty fields
-        x6 = 0  # Number of rows/columns/diagonals with three own pieces
+        features = [0.0 for _ in range(10)]
 
-        if board[1][1] == player:
-            x3 += 1
-        if board[0][0] == player:
-            x4 += 1
-        if board[2][2] == player:
-            x4 += 1
-        if board[0][2] == player:
-            x4 += 1
-        if board[2][0] == player:
-            x4 += 1
-        if player == 'x':
-            enemy_color = 'o'
-        else:
-            enemy_color = 'x'
+        player_color = player
+        enemy_color = 'O' if player == 'X' else 'X'
 
         for i in range(3):
             own_rows = 0
-            own_columns = 0
             enemy_rows = 0
-            enemy_columns = 0
             empty_rows = 0
+            own_columns = 0
+            enemy_columns = 0
             empty_columns = 0
+
             for j in range(3):
-                if board[i][j] == 0:
-                    empty_rows += 1
-                elif board[i][j] == player:
+                if board[i][j] == player_color:
                     own_rows += 1
                 elif board[i][j] == enemy_color:
                     enemy_rows += 1
-                if board[j][i] == 0:
-                    empty_columns += 1
-                elif board[j][i] == player:
+                else:
+                    empty_rows += 1
+
+                if board[j][i] == player_color:
                     own_columns += 1
                 elif board[j][i] == enemy_color:
                     enemy_columns += 1
+                else:
+                    empty_columns += 1
 
-            if own_rows == 2 and empty_rows == 1:
-                x1 += 1
-            if enemy_rows == 2 and empty_rows == 1:
-                x2 += 1
-            if own_columns == 2 and empty_columns == 1:
-                x1 += 1
-            if enemy_columns == 2 and empty_columns == 1:
-                x2 += 1
-
-            if own_rows == 1 and empty_rows == 2:
-                x5 += 1
-            if own_columns == 1 and empty_columns == 2:
-                x5 += 1
-            if own_rows == 3:
-                x6 += 1
-            if own_columns == 3:
-                x6 += 1
+            features[own_rows] += 1
+            features[3 + own_columns] += 1
+            features[6] += 1 if own_rows + own_columns == 2 else 0
 
         for i in range(2):
             own_diagonal = 0
             enemy_diagonal = 0
             empty_diagonal = 0
+
             for j in range(3):
                 if i == 0:
-                    diagonal = board[2-j][j]
+                    diagonal = board[2 - j][j]
                 else:
                     diagonal = board[j][j]
-                if diagonal == player:
+
+                if diagonal == player_color:
                     own_diagonal += 1
-                if diagonal == 0:
-                    empty_diagonal += 1
-                if diagonal == enemy_color:
+                elif diagonal == enemy_color:
                     enemy_diagonal += 1
-            if own_diagonal == 2 and empty_diagonal == 1:
-                x1 += 1
-            if enemy_diagonal == 2 and empty_diagonal == 1:
-                x2 += 1
-            if own_diagonal == 1 and empty_diagonal == 2:
-                x5 += 1
-            if own_diagonal == 3:
-                x6 += 1
+                else:
+                    empty_diagonal += 1
 
-        return [x0, x1, x2, x3, x4, x5, x6]
+            features[9] += 1 if own_diagonal == 2 else 0
 
-    def evalApproximation(self, features, weights):
-        val = 0.0
-        for i in range(len(weights)):
-            val += features[i] * weights[i]
-        return val
+        return features
 
-    def linear_regression_player(self, board, weights, player):
-        new_boards = list()
+    def train(self, num_iterations, learning_constant):
+        weights = [0.0 for _ in range(10)]
+        for _ in range(num_iterations):
+            self.board = [['-' for _ in range(3)] for _ in range(3)]
+            curr_player = 'X'
+            while True:
+                available_moves = self.get_available_moves()
+                if not available_moves:
+                    break
+                move = random.choice(available_moves)
+                self.make_move(move[0], move[1], curr_player)
+                features = self.get_board_features(self.board, curr_player)
+                if self.is_player_win(self.board, curr_player):
+                    self.weight_update(
+                        weights, learning_constant, 1, self.evaluate(self.board, curr_player), features)
+                    break
+                elif self.is_player_win(self.board, 'O' if curr_player == 'X' else 'X'):
+                    self.weight_update(
+                        weights, learning_constant, -1, self.evaluate(self.board, curr_player), features)
+                    break
+                elif len(available_moves) == 1:
+                    self.weight_update(
+                        weights, learning_constant, 0, self.evaluate(self.board, curr_player), features)
+                    break
+                else:
+                    self.weight_update(
+                        weights, learning_constant, 0, self.evaluate(self.board, curr_player), features)
+                    curr_player = 'O' if curr_player == 'X' else 'X'
+        return weights
+
+    def make_move(self, row, col, player):
+        self.board[row][col] = player
+
+    def get_available_moves(self):
+        available_moves = []
         for i in range(3):
             for j in range(3):
-                if board[i][j] == '-':
-                    new_board = copy.deepcopy(board)
-                    new_board[i][j] = player
-                    new_boards.append((new_board, (i, j)))
-        val = -9999999
-        best_move = ''
-        for i in new_boards:
-            features = self.get_board_features(i[0], player)
-            curr_val = self.evalApproximation(features, weights)
-            if val < curr_val:
-                val = curr_val
-                best_move = i[1]
-        if best_move:
-            board[best_move[0]][best_move[1]] = player
+                if self.board[i][j] == '-':
+                    available_moves.append((i, j))
+        return available_moves
+
+    def evaluate(self, board, player):
+        if self.is_player_win(board, player):
+            return 1
+        elif self.is_player_win(board, 'O' if player == 'X' else 'X'):
+            return -1
         else:
-            return False
+            return 0
 
-    def get_available_spots(self, board):
-        available_spots = []
-        for i in range(3):
-            for j in range(3):
-                if board[i][j] == '-':
-                    available_spots.append((i, j))
-        return available_spots
-
-    def random_player(self, board, player):
-        available_spots = self.get_available_spots(board)
+    def get_random_move(self, board, player):
+        available_spots = self.get_available_moves()
         while True:
             x_coord = random.randint(0, 2)
             y_coord = random.randint(0, 2)
             if (x_coord, y_coord) in available_spots:
-                board[x_coord][y_coord] = player
-                break
+                return (x_coord,y_coord)
 
-    def start_against_random(self):
-        player = random.choice(['X', 'O'])
-        while True:
-            player = 'O' if player == 'X' else 'X'
-            if player == 'X':
-                self.linear_regression_player(self.board, player)
-            else:
-                self.random_player(self.board, player)
 
-            if self.is_player_win(self.board, player):
-                self.display_board()
-                print(player)
-                return 1 if player == 'X' else -1
-            if len(self.get_available_spots(self.board)) == 0:
-                self.display_board()
-                print(player)
-                return 0
-
-    def train(self):
-        weights = [1.0 for _ in range(7)]
-        lr = 0.00005
-        player = random.choice(['X', 'O'])
-        print('Start Training ...')
-        for _ in range(100000):
-            board = copy.deepcopy(self.board)  # Fix: Create a deep copy of the board
-            while True:
-                pre_features = self.get_board_features(board, player)
-                pre_approx = self.evalApproximation(pre_features, weights)
-
-                if player == 'X':
-                    self.linear_regression_player(board, weights, player)
-                else:
-                    self.random_player(board, player)
-
-                if self.is_player_win(board, player):
-                    if player == 'X':
-                        result = 1
-                    else:
-                        result = -1
-
-                    curr_features = self.get_board_features(board, player)
-                    curr_approx = self.evalApproximation(curr_features, weights)
-                    self.weight_update(weights=weights, learningConstant=lr,
-                                    train_val=result, approx=curr_approx, features=pre_features)
-                    break
-
-                if len(self.get_available_spots(board)) == 0:
-                    result = 0
-                    curr_features = self.get_board_features(board, player)
-                    curr_approx = self.evalApproximation(curr_features, weights)
-                    self.weight_update(weights=weights, learningConstant=lr,
-                                    train_val=result, approx=curr_approx, features=pre_features)
-                    break
-
-                succ_features = self.get_board_features(board, player)
-                succ_approx = self.evalApproximation(succ_features, weights)
-                self.weight_update(weights=weights, learningConstant=lr, train_val=succ_approx, approx=pre_approx,
-                                features=pre_features)
-                player = 'X' if player == 'O' else 'O'
-
-        print('Start Evaluation against Random Player')
+    def play(self, weights):
         count_win = 0
-        count_loss = 0
         count_draw = 0
-        for _ in range(10000):
-            board = [['-' for _ in range(3)] for _ in range(3)]  
-            player = random.choice(['X', 'O'])
+        count_loss = 0
+        for i in range(1000):
+            self.board = [['-' for _ in range(3)] for _ in range(3)]
+            curr_player = 'X'
             while True:
-                pre_features = self.get_board_features(board, player)
-                pre_approx = self.evalApproximation(pre_features, weights)
-
-                if player == 'X':
-                    self.linear_regression_player(board, weights, player)
-                else:
-                    self.random_player(board, player)
-
-                if self.is_player_win(board, player):
-                    if player == 'X':
-                        count_win += 1
-                        break
+                if curr_player == 'X':
+                    move = self.get_best_move(weights, curr_player)
+                    self.make_move(move[0], move[1], curr_player)
+                else: 
+                    move = self.get_random_move(weights, curr_player)
+                    self.make_move(move[0], move[1], curr_player)
+                if self.is_player_win(self.board, curr_player):
+                    if curr_player == 'X':
+                        count_win += 1 
                     else:
                         count_loss += 1
-                        break
-
-                if len(self.get_available_spots(board)) == 0:
+                    break
+                elif len(self.get_available_moves()) == 1:
                     count_draw += 1
                     break
-
-                succ_features = self.get_board_features(board, player)
-                succ_approx = self.evalApproximation(succ_features, weights)
-                self.weight_update(weights=weights, learningConstant=lr, train_val=succ_approx, approx=pre_approx,
-                                features=pre_features)
-                player = 'X' if player == 'O' else 'O'
-
+                else:
+                    curr_player = 'O' if curr_player == 'X' else 'X'
         print('Wins: ' + str(count_win))
         print('Draws: ' + str(count_draw))
         print('Losses: ' + str(count_loss))
 
+    def get_best_move(self, weights, player):
+        best_move = None
+        best_value = float('-inf')
+
+        for move in self.get_available_moves():
+            self.board[move[0]][move[1]] = player
+            features = self.get_board_features(self.board, player)
+            value = sum(feature * weight for feature,
+                        weight in zip(features, weights))
+            self.board[move[0]][move[1]] = '-'
+            if value > best_value:
+                best_value = value
+                best_move = move
+
+        return best_move
 
 
-game = TicTacToe()
-game.train()
+if __name__ == '__main__':
+    tictactoe = TicTacToe()
+    weights = tictactoe.train(100000 , 0.001)
+    tictactoe.play(weights)
