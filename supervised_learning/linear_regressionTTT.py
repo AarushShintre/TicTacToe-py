@@ -34,8 +34,7 @@ class TicTacToe:
 
     def weight_update(self, weights, learningConstant, train_val, approx, features):
         for i in range(len(weights)):
-            weights[i] = weights[i] + learningConstant * \
-                (train_val - approx) * features[i]
+            weights[i] = weights[i] + learningConstant * (train_val - approx) * features[i]
 
     def get_board_features(self, board, player):
         features = [0.0 for _ in range(10)]
@@ -149,7 +148,6 @@ class TicTacToe:
             if (x_coord, y_coord) in available_spots:
                 return (x_coord,y_coord)
 
-
     def play(self, weights):
         count_win = 0
         count_draw = 0
@@ -199,4 +197,5 @@ class TicTacToe:
 if __name__ == '__main__':
     tictactoe = TicTacToe()
     weights = tictactoe.train(100000 , 0.001)
+    print(weights)
     tictactoe.play(weights)
